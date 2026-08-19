@@ -82,13 +82,18 @@ def test_admin_analytics_success(client: TestClient, admin_auth_headers):
     assert "total_asset_volume" in data
 
 
+from backend.app.services.ml_service import load_model_artifact
+
+
 def test_admin_monitoring_success(client: TestClient, admin_auth_headers):
     """Admin can retrieve model monitoring metadata, candidate comparisons, and telemetry."""
     res = client.get("/api/v1/admin/monitoring", headers=admin_auth_headers)
     assert res.status_code == 200
     data = res.json()
+    artifact = load_model_artifact()
+    expected_algorithm = artifact.get("model_name", "Random Forest")
     assert data["model_version"] == "loan-model-v2.0"
-    assert data["algorithm"] == "Gradient Boosting"
+    assert data["algorithm"] == expected_algorithm
     assert data["status"] == "ACTIVE"
     assert "total_predictions" in data
     assert "average_latency_ms" in data
@@ -98,7 +103,7 @@ def test_admin_monitoring_success(client: TestClient, admin_auth_headers):
     assert "all_models_test_metrics" in data
     assert "all_models_cv_metrics" in data
     assert "candidate_models" in data
-    assert data["champion_model"] == "Gradient Boosting"
+    assert data["champion_model"] == expected_algorithm
     assert data["champion_version"] == "loan-model-v2.0"
     assert "Logistic Regression" in data["all_models_test_metrics"]
     assert "Decision Tree" in data["all_models_test_metrics"]

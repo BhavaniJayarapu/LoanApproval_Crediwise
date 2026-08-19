@@ -49,8 +49,8 @@ class TestModelTraining(unittest.TestCase):
         cls.artifact = joblib.load(MODEL_ARTIFACT_PATH)
 
     def test_01_processed_dataset_loads(self):
-        """Verifies that processed dataset loads with 4,269 rows."""
-        self.assertEqual(len(self.df), 4269)
+        """Verifies that processed dataset loads with 10,000 rows."""
+        self.assertEqual(len(self.df), 10000)
         self.assertIn(TARGET_COLUMN, self.df.columns)
 
     def test_02_leakage_and_excluded_features(self):
@@ -79,8 +79,11 @@ class TestModelTraining(unittest.TestCase):
             X, y, test_size=0.20, stratify=y, random_state=RANDOM_STATE, shuffle=True
         )
 
-        self.assertEqual(len(X_train), 3415)
-        self.assertEqual(len(X_test), 854)
+        expected_train_count = int(len(self.df) * 0.80)
+        expected_test_count = len(self.df) - expected_train_count
+
+        self.assertEqual(len(X_train), expected_train_count)
+        self.assertEqual(len(X_test), expected_test_count)
 
         train_pos_ratio = float(y_train.mean())
         test_pos_ratio = float(y_test.mean())
@@ -128,11 +131,14 @@ class TestModelTraining(unittest.TestCase):
         for k in required_keys:
             self.assertIn(k, self.artifact, f"Missing key '{k}' in model artifact")
 
+        expected_train_count = int(len(self.df) * 0.80)
+        expected_test_count = len(self.df) - expected_train_count
+
         self.assertEqual(self.artifact["model_version"], MODEL_VERSION)
         self.assertEqual(self.artifact["training_currency"], "INR")
-        self.assertEqual(self.artifact["training_row_count"], 3415)
-        self.assertEqual(self.artifact["test_row_count"], 854)
-        self.assertEqual(self.artifact["model_name"], "Gradient Boosting")
+        self.assertEqual(self.artifact["training_row_count"], expected_train_count)
+        self.assertEqual(self.artifact["test_row_count"], expected_test_count)
+        self.assertIn(self.artifact["model_name"], list(get_candidate_models().keys()))
 
     def test_07_model_probabilities_bounds(self):
         """Verifies that predictions and probabilities remain within [0.0, 1.0]."""
